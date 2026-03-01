@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Union, TypeAlias
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -39,7 +39,7 @@ class BodySizeAssertion(BaseModel):
     op: Op
     expected: int
 
-Assertion = Annotated[
+Assertion: TypeAlias = Annotated[
     Union[StatusAssertion, JsonAssertion, HeaderAssertion, ResponseTimeAssertion, BodySizeAssertion],
     Field(discriminator="type")
 ]
