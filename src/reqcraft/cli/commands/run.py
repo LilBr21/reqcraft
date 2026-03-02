@@ -4,11 +4,8 @@ from rich.console import Console
 from reqcraft.utils.yaml_loader import load_collection, load_environment
 from reqcraft.core.executor import execute
 
-app = typer.Typer()
-
 console = Console()
 
-@app.command()
 def run(
     collection: Path = typer.Argument(..., help="Path to collection YAML file"),
     env: Path = typer.Option(None, "--env", help="Path to environment file"),
