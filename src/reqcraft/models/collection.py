@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 from reqcraft.models.assertion import Assertion
 
@@ -17,9 +17,11 @@ class Extract(BaseModel):
     path: str = ""
 
 class RequestBody(BaseModel):
-    json: dict[str, object] | None = None
+    json_body: dict[str, object] | None = Field(None, alias="json")
     form: dict[str, str] | None = None
     raw: str | None = None
+
+    model_config = {"populate_by_name": True}
 
 class Request(BaseModel):
     id: str
