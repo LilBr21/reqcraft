@@ -11,18 +11,26 @@ def run(
     env: Path = typer.Option(None, "--env", help="Path to environment file"),
     var: list[str] = typer.Option([], "--var", help="Override variable (key=value)"),
 ):
-    loaded_collection = load_collection(collection)
-    variables: dict[str, str] = {}
+    try:
+        loaded_collection = load_collection(collection)
+        variables: dict[str, str] = {}
 
-    if env:
-        loaded_env = load_environment(env)
-        variables = dict(loaded_env.variables)
+        if env:
+            loaded_env = load_environment(env)
+            variables = dict(loaded_env.variables)
+    except Exception as e:
+        console.print(f"[red]Validation error: {e}[/red]")
+        raise typer.Exit(code=2)
 
     for v in var:
         key, value = v.split("=", 1)
         variables[key] = value
 
-    report = execute(loaded_collection, variables)
+    try:
+        report = execute(loaded_collection, variables)
+    except Exception as e:
+        console.print(f"[red]Network error: {e}[/red]")
+        raise typer.Exit(code=3)
 
     console.print(f"[bold]Running {loaded_collection.name}[/bold]")
     for result in report.results:
@@ -36,3 +44,6 @@ def run(
         for a in result.assertions:
             console.print(f"  {a.message}")
     console.print(f"\n{report.passed}/{report.total} passed")
+
+    if report.failed > 0:
+        raise typer.Exit(code=1)
