@@ -26,9 +26,13 @@ def run(
 
     console.print(f"[bold]Running {loaded_collection.name}[/bold]")
     for result in report.results:
+        console.print(f"Status code: {result.status_code}")
+        console.print(f"Response time (ms): {result.response_time_ms}")
+        console.print(f"Response:")
+        console.print_json(result.body)
         icon = "✓" if result.passed else "✗"
         color = "green" if result.passed else "red"
-        console.print(f"[{color}]{icon} {result.name}[/{color}]")
+        console.print(f"[{color}]{icon} {result.name} (Test result)[/{color}]")
         for a in result.assertions:
             console.print(f"  {a.message}")
     console.print(f"\n{report.passed}/{report.total} passed")

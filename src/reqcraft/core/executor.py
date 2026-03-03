@@ -51,6 +51,7 @@ def execute(collection: Collection, variables: dict[str, str]) -> RunReport:
             status_code=response.status_code,
             response_time_ms=response.elapsed.total_seconds() * 1000,
             assertions=assertion_results,
+            body=response.text,
             error=None
         ))
         if assertions_passed:

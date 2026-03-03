@@ -12,6 +12,7 @@ class RequestResult(BaseModel):
     status_code: int | None = None
     response_time_ms: float | None = None
     assertions: list[AssertionResult] = []
+    body: str | None = None
     error: str | None = None
 
 class RunReport(BaseModel):
