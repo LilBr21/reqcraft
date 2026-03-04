@@ -35,7 +35,15 @@ def execute(collection: Collection, variables: dict[str, str]) -> RunReport:
         assertion_results = []
         url = render(req.url, final_variables)
         headers = {k: render(v, final_variables) for k, v in req.headers.items()}
-        response = httpx.request(req.method.value, url, headers=headers, params=req.params)
+        response = httpx.request(
+            req.method.value,
+            url,
+            headers=headers,
+            params=req.params,
+            json=req.body.json_body if req.body and req.body.json_body else None,
+            data=req.body.form if req.body and req.body.form else None,
+            content=req.body.raw if req.body and req.body.raw else None,
+        )
         for assertion in req.assertions:
             evaluated = evaluate(assertion, response)
             if not evaluated.passed:
