@@ -21,3 +21,7 @@ class RunReport(BaseModel):
     failed: int
     skipped: int = 0
     results: list[RequestResult]
+
+class RunDryRun(BaseModel):
+    method_value = str,
+    headers = dict[str, str],

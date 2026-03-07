@@ -5,23 +5,25 @@ from reqcraft.core.assertions import evaluate
 from reqcraft.models.collection import Collection, Request
 from reqcraft.models.result import RequestResult, RunReport
 
+
 def _sort_requests(requests: list[Request]) -> list[Request]:
     result: list[Request] = []
     visited: set[str] = set()
     by_id = {req.id: req for req in requests}
 
     def visit(request: Request):
-            if request.id in visited:
-                return
-            for dep_id in request.depends_on:
-                visit(by_id[dep_id])
-            visited.add(request.id)
-            result.append(request)
+        if request.id in visited:
+            return
+        for dep_id in request.depends_on:
+            visit(by_id[dep_id])
+        visited.add(request.id)
+        result.append(request)
 
     for req in requests:
         visit(req)
 
     return result
+
 
 def _collect_with_deps(ids: set[str], by_id: dict[str, Request]) -> set[str]:
     result: set[str] = set()
@@ -39,7 +41,8 @@ def _collect_with_deps(ids: set[str], by_id: dict[str, Request]) -> set[str]:
     return result
 
 
-def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str], fail_fast: bool) -> RunReport:
+def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str],
+            fail_fast: bool) -> RunReport:
     final_variables = collection.variables | variables
     sorted_requests = _sort_requests(collection.requests)
     results: list[RequestResult] = []
@@ -61,7 +64,6 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
                         f"Cannot skip '{next(iter(blocked))}' because request '{r.id}' depends on it."
                     )
         sorted_requests = [r for r in sorted_requests if r.id not in skip_set]
-
 
     for req in sorted_requests:
         assertions_passed = True
@@ -114,3 +116,27 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
         failed=failed,
         results=results
     )
+
+def execute_dry_run(collection: Collection, variables: dict[str, str]) -> None:
+    final_variables = collection.variables | variables
+    sorted_requests = _sort_requests(collection.requests)
+
+    for req in sorted_requests:
+        try:
+            url = render(req.url, final_variables)
+            headers = {k: render(v, final_variables) for k, v in req.headers.items()}
+        except Exception as e:
+            raise ValueError(f"Render error in request '{req.id}': {e}")
+
+        print(f"{req.method.value} {url}")
+        for key, value in headers.items():
+            print(f"  {key}: {value}")
+        if req.body:
+            if req.body.json_body:
+                print(f"  body (json): {req.body.json_body}")
+            elif req.body.form:
+                print(f"  body (form): {req.body.form}")
+            elif req.body.raw:
+                print(f"  body (raw): {req.body.raw}")
+        print()
+

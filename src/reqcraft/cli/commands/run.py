@@ -2,7 +2,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from reqcraft.utils.yaml_loader import load_collection, load_environment
-from reqcraft.core.executor import execute
+from reqcraft.core.executor import execute, execute_dry_run
 
 console = Console()
 
@@ -13,6 +13,7 @@ def run(
     only: list[str] = typer.Option([], "--only", help="Collection items to run"),
     skip: list[str] = typer.Option([], "--skip", help="Collection items to skip"),
     fail_fast: bool = typer.Option(False, "--fail-fast", help="Quit running tests after first fail"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Dry run request without making actual api calls"),
 ):
     try:
         loaded_collection = load_collection(collection)
@@ -30,6 +31,9 @@ def run(
         variables[key] = value
 
     try:
+        if dry_run:
+            execute_dry_run(loaded_collection, variables)
+            return
         report = execute(loaded_collection, variables, only, skip, fail_fast)
     except ValueError as e:
         console.print(f"[red]Validation error: {e}[/red]")
