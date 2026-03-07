@@ -19,4 +19,5 @@ class RunReport(BaseModel):
     total: int
     passed: int
     failed: int
+    skipped: int = 0
     results: list[RequestResult]

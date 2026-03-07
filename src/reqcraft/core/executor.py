@@ -39,7 +39,7 @@ def _collect_with_deps(ids: set[str], by_id: dict[str, Request]) -> set[str]:
     return result
 
 
-def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str]) -> RunReport:
+def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str], fail_fast: bool) -> RunReport:
     final_variables = collection.variables | variables
     sorted_requests = _sort_requests(collection.requests)
     results: list[RequestResult] = []
@@ -99,6 +99,14 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
             passed += 1
         else:
             failed += 1
+            if fail_fast:
+                return RunReport(
+                    total=len(sorted_requests),
+                    passed=passed,
+                    failed=failed,
+                    skipped=len(sorted_requests) - len(results),
+                    results=results
+                )
 
     return RunReport(
         total=len(sorted_requests),

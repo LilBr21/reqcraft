@@ -12,6 +12,7 @@ def run(
     var: list[str] = typer.Option([], "--var", help="Override variable (key=value)"),
     only: list[str] = typer.Option([], "--only", help="Collection items to run"),
     skip: list[str] = typer.Option([], "--skip", help="Collection items to skip"),
+    fail_fast: bool = typer.Option(False, "--fail-fast", help="Quit running tests after first fail"),
 ):
     try:
         loaded_collection = load_collection(collection)
@@ -29,7 +30,7 @@ def run(
         variables[key] = value
 
     try:
-        report = execute(loaded_collection, variables, only, skip)
+        report = execute(loaded_collection, variables, only, skip, fail_fast)
     except ValueError as e:
         console.print(f"[red]Validation error: {e}[/red]")
         raise typer.Exit(code=2)
