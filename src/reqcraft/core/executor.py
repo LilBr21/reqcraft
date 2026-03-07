@@ -23,12 +23,45 @@ def _sort_requests(requests: list[Request]) -> list[Request]:
 
     return result
 
-def execute(collection: Collection, variables: dict[str, str]) -> RunReport:
+def _collect_with_deps(ids: set[str], by_id: dict[str, Request]) -> set[str]:
+    result: set[str] = set()
+
+    def visit(req_id: str) -> None:
+        if req_id in result:
+            return
+        result.add(req_id)
+        for dep_id in by_id[req_id].depends_on:
+            visit(dep_id)
+
+    for req_id in ids:
+        visit(req_id)
+
+    return result
+
+
+def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str]) -> RunReport:
     final_variables = collection.variables | variables
     sorted_requests = _sort_requests(collection.requests)
     results: list[RequestResult] = []
     passed = 0
     failed = 0
+
+    if only:
+        by_id = {r.id: r for r in sorted_requests}
+        required_ids = _collect_with_deps(set(only), by_id)
+        sorted_requests = [r for r in sorted_requests if r.id in required_ids]
+
+    if skip:
+        skip_set = set(skip)
+        for r in sorted_requests:
+            if r.id not in skip_set:
+                blocked = skip_set.intersection(r.depends_on)
+                if blocked:
+                    raise ValueError(
+                        f"Cannot skip '{next(iter(blocked))}' because request '{r.id}' depends on it."
+                    )
+        sorted_requests = [r for r in sorted_requests if r.id not in skip_set]
+
 
     for req in sorted_requests:
         assertions_passed = True

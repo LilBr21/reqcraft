@@ -10,6 +10,8 @@ def run(
     collection: Path = typer.Argument(..., help="Path to collection YAML file"),
     env: Path = typer.Option(None, "--env", help="Path to environment file"),
     var: list[str] = typer.Option([], "--var", help="Override variable (key=value)"),
+    only: list[str] = typer.Option([], "--only", help="Collection items to run"),
+    skip: list[str] = typer.Option([], "--skip", help="Collection items to skip"),
 ):
     try:
         loaded_collection = load_collection(collection)
@@ -27,7 +29,10 @@ def run(
         variables[key] = value
 
     try:
-        report = execute(loaded_collection, variables)
+        report = execute(loaded_collection, variables, only, skip)
+    except ValueError as e:
+        console.print(f"[red]Validation error: {e}[/red]")
+        raise typer.Exit(code=2)
     except Exception as e:
         console.print(f"[red]Network error: {e}[/red]")
         raise typer.Exit(code=3)
