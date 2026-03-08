@@ -42,7 +42,7 @@ def _collect_with_deps(ids: set[str], by_id: dict[str, Request]) -> set[str]:
 
 
 def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str],
-            fail_fast: bool) -> RunReport:
+            fail_fast: bool, verbose: bool) -> RunReport:
     final_variables = collection.variables | variables
     sorted_requests = _sort_requests(collection.requests)
     results: list[RequestResult] = []
@@ -94,6 +94,10 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
             status_code=response.status_code,
             response_time_ms=response.elapsed.total_seconds() * 1000,
             assertions=assertion_results,
+            request_url=url,
+            request_method=req.method,
+            request_headers=headers if headers else None,
+            response_headers=dict(response.headers) if response else None,
             body=response.text,
             error=None
         ))

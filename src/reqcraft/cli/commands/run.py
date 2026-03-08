@@ -14,6 +14,7 @@ def run(
     skip: list[str] = typer.Option([], "--skip", help="Collection items to skip"),
     fail_fast: bool = typer.Option(False, "--fail-fast", help="Quit running tests after first fail"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Dry run request without making actual api calls"),
+    verbose: bool = typer.Option(False, "--verbose", help="Verbose output"),
 ):
     try:
         loaded_collection = load_collection(collection)
@@ -34,7 +35,7 @@ def run(
         if dry_run:
             execute_dry_run(loaded_collection, variables)
             return
-        report = execute(loaded_collection, variables, only, skip, fail_fast)
+        report = execute(loaded_collection, variables, only, skip, fail_fast, verbose)
     except ValueError as e:
         console.print(f"[red]Validation error: {e}[/red]")
         raise typer.Exit(code=2)
@@ -46,8 +47,13 @@ def run(
     for result in report.results:
         console.print(f"Status code: {result.status_code}")
         console.print(f"Response time (ms): {result.response_time_ms}")
-        console.print(f"Response:")
-        console.print_json(result.body)
+        if verbose:
+            console.print(f"Request url: {result.request_url}")
+            console.print(f"Request method: {result.request_method}")
+            console.print(f"Request headers: {result.request_headers}")
+            console.print(f"Response headers: {result.response_headers}")
+            console.print(f"Response body:")
+            console.print_json(result.body)
         icon = "✓" if result.passed else "✗"
         color = "green" if result.passed else "red"
         console.print(f"[{color}]{icon} {result.name} (Test result)[/{color}]")
