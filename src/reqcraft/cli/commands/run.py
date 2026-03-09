@@ -1,10 +1,27 @@
+import sys
 from pathlib import Path
 import typer
+import json
+from enum import Enum
 from rich.console import Console
 from reqcraft.utils.yaml_loader import load_collection, load_environment
 from reqcraft.core.executor import execute, execute_dry_run
 
+class OutputFormat(str, Enum):
+    JSON = "json"
+    TEXT = "text"
+
+class ErrorType(str, Enum):
+    VALIDATION = "Validation"
+    NETWORK = "Network"
+
 console = Console()
+
+def _handle_error(error: Exception, error_type: ErrorType, output_format: OutputFormat):
+    if output_format == OutputFormat.JSON:
+        print(f"{error_type} error: {error}", file=sys.stderr)
+    else:
+        console.print(f"[red]{error_type} error: {error}[/red]")
 
 def run(
     collection: Path = typer.Argument(..., help="Path to collection YAML file"),
@@ -15,6 +32,7 @@ def run(
     fail_fast: bool = typer.Option(False, "--fail-fast", help="Quit running tests after first fail"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Dry run request without making actual api calls"),
     verbose: bool = typer.Option(False, "--verbose", help="Verbose output"),
+    output: OutputFormat = typer.Option(OutputFormat.TEXT, "--output", help="Result printed as a single JSON object"),
 ):
     try:
         loaded_collection = load_collection(collection)
@@ -24,7 +42,7 @@ def run(
             loaded_env = load_environment(env)
             variables = dict(loaded_env.variables)
     except Exception as e:
-        console.print(f"[red]Validation error: {e}[/red]")
+        _handle_error(e, ErrorType.VALIDATION, output)
         raise typer.Exit(code=2)
 
     for v in var:
@@ -37,29 +55,41 @@ def run(
             return
         report = execute(loaded_collection, variables, only, skip, fail_fast, verbose)
     except ValueError as e:
-        console.print(f"[red]Validation error: {e}[/red]")
+        _handle_error(e, ErrorType.VALIDATION, output)
         raise typer.Exit(code=2)
     except Exception as e:
-        console.print(f"[red]Network error: {e}[/red]")
+        _handle_error(e, ErrorType.NETWORK, output)
         raise typer.Exit(code=3)
 
-    console.print(f"[bold]Running {loaded_collection.name}[/bold]")
-    for result in report.results:
-        console.print(f"Status code: {result.status_code}")
-        console.print(f"Response time (ms): {result.response_time_ms}")
-        if verbose:
-            console.print(f"Request url: {result.request_url}")
-            console.print(f"Request method: {result.request_method}")
-            console.print(f"Request headers: {result.request_headers}")
-            console.print(f"Response headers: {result.response_headers}")
-            console.print(f"Response body:")
-            console.print_json(result.body)
-        icon = "✓" if result.passed else "✗"
-        color = "green" if result.passed else "red"
-        console.print(f"[{color}]{icon} {result.name} (Test result)[/{color}]")
-        for a in result.assertions:
-            console.print(f"  {a.message}")
-    console.print(f"\n{report.passed}/{report.total} passed")
+    if output == OutputFormat.JSON:
+        report_dict = report.model_dump()
+        for result in report_dict["results"]:
+            if result["body"]:
+                try:
+                    parsed_result = json.loads(result["body"])
+                    result["body"] = parsed_result
+                except json.JSONDecodeError:
+                    pass
+        report_json = json.dumps(report_dict, indent=2)
+        print(report_json)
+    else:
+        console.print(f"[bold]Running {loaded_collection.name}[/bold]")
+        for result in report.results:
+            console.print(f"Status code: {result.status_code}")
+            console.print(f"Response time (ms): {result.response_time_ms}")
+            if verbose:
+                console.print(f"Request url: {result.request_url}")
+                console.print(f"Request method: {result.request_method}")
+                console.print(f"Request headers: {result.request_headers}")
+                console.print(f"Response headers: {result.response_headers}")
+                console.print(f"Response body:")
+                console.print_json(result.body)
+            icon = "✓" if result.passed else "✗"
+            color = "green" if result.passed else "red"
+            console.print(f"[{color}]{icon} {result.name} (Test result)[/{color}]")
+            for a in result.assertions:
+                console.print(f"  {a.message}")
+        console.print(f"\n{report.passed}/{report.total} passed")
 
     if report.failed > 0:
         raise typer.Exit(code=1)
