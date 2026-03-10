@@ -6,6 +6,16 @@ from reqcraft.models.collection import Collection, Request
 from reqcraft.models.result import RequestResult, RunReport
 
 
+def _render_value(value: object, variables: dict[str, str]) -> object:
+    if isinstance(value, str):
+        return render(value, variables)
+    if isinstance(value, dict):
+        return {k: _render_value(v, variables) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_render_value(item, variables) for item in value]
+    return value
+
+
 def _sort_requests(requests: list[Request]) -> list[Request]:
     result: list[Request] = []
     visited: set[str] = set()
@@ -70,15 +80,19 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
         assertion_results = []
         url = render(req.url, final_variables)
         headers = {k: render(v, final_variables) for k, v in req.headers.items()}
+        params = {k: render(v, final_variables) for k, v in req.params.items()}
+        json_body = _render_value(req.body.json_body, final_variables) if req.body and req.body.json_body else None
+        form_body = {k: render(v, final_variables) for k, v in req.body.form.items()} if req.body and req.body.form else None
+        raw_body = render(req.body.raw, final_variables) if req.body and req.body.raw else None
         try:
             response = httpx.request(
                 req.method.value,
                 url,
                 headers=headers,
-                params=req.params,
-                json=req.body.json_body if req.body and req.body.json_body else None,
-                data=req.body.form if req.body and req.body.form else None,
-                content=req.body.raw if req.body and req.body.raw else None,
+                params=params,
+                json=json_body,
+                data=form_body,
+                content=raw_body,
                 timeout=req.timeout,
             )
         except httpx.TimeoutException as e:
@@ -90,7 +104,7 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
                 response_time_ms=None,
                 assertions=[],
                 request_url=url,
-                request_method=req.method,
+                request_method=req.method.value,
                 request_headers=headers if headers else None,
                 response_headers=None,
                 body=None,
@@ -119,10 +133,10 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
             name=req.name,
             passed=assertions_passed,
             status_code=response.status_code,
-            response_time_ms=response.elapsed.total_seconds() * 1000,
+            response_time_ms=response.elapsed.total_seconds() * 1000 if response.elapsed else None,
             assertions=assertion_results,
             request_url=url,
-            request_method=req.method,
+            request_method=req.method.value,
             request_headers=headers if headers else None,
             response_headers=dict(response.headers) if response else None,
             body=response.text,
