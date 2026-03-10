@@ -2,6 +2,7 @@ import httpx
 from reqcraft.core.renderer import render
 from reqcraft.core.extractor import extract_values
 from reqcraft.core.assertions import evaluate
+from reqcraft.core.auth import resolve_auth
 from reqcraft.models.collection import Collection, Request
 from reqcraft.models.result import RequestResult, RunReport
 
@@ -52,7 +53,7 @@ def _collect_with_deps(ids: set[str], by_id: dict[str, Request]) -> set[str]:
 
 
 def execute(collection: Collection, variables: dict[str, str], only: list[str], skip: list[str],
-            fail_fast: bool, verbose: bool) -> RunReport:
+            fail_fast: bool) -> RunReport:
     final_variables = collection.variables | variables
     sorted_requests = _sort_requests(collection.requests)
     results: list[RequestResult] = []
@@ -79,7 +80,9 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
         assertions_passed = True
         assertion_results = []
         url = render(req.url, final_variables)
+        auth_headers = resolve_auth(req.auth, final_variables)
         headers = {k: render(v, final_variables) for k, v in req.headers.items()}
+        final_headers = auth_headers | headers
         params = {k: render(v, final_variables) for k, v in req.params.items()}
         json_body = _render_value(req.body.json_body, final_variables) if req.body and req.body.json_body else None
         form_body = {k: render(v, final_variables) for k, v in req.body.form.items()} if req.body and req.body.form else None
@@ -88,7 +91,7 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
             response = httpx.request(
                 req.method.value,
                 url,
-                headers=headers,
+                headers=final_headers,
                 params=params,
                 json=json_body,
                 data=form_body,
@@ -105,7 +108,7 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
                 assertions=[],
                 request_url=url,
                 request_method=req.method.value,
-                request_headers=headers if headers else None,
+                request_headers=final_headers if final_headers else None,
                 response_headers=None,
                 body=None,
                 error=str(e) or "Request timed out",
@@ -137,7 +140,7 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
             assertions=assertion_results,
             request_url=url,
             request_method=req.method.value,
-            request_headers=headers if headers else None,
+            request_headers=final_headers if final_headers else None,
             response_headers=dict(response.headers) if response else None,
             body=response.text,
             error=None
@@ -169,12 +172,14 @@ def execute_dry_run(collection: Collection, variables: dict[str, str]) -> None:
     for req in sorted_requests:
         try:
             url = render(req.url, final_variables)
+            auth_headers = resolve_auth(req.auth, final_variables)
             headers = {k: render(v, final_variables) for k, v in req.headers.items()}
+            final_headers = auth_headers | headers
         except Exception as e:
             raise ValueError(f"Render error in request '{req.id}': {e}")
 
         print(f"{req.method.value} {url}")
-        for key, value in headers.items():
+        for key, value in final_headers.items():
             print(f"  {key}: {value}")
         if req.body:
             if req.body.json_body:
