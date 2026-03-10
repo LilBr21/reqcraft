@@ -6,6 +6,7 @@ from enum import Enum
 from rich.console import Console
 from reqcraft.utils.yaml_loader import load_collection, load_environment
 from reqcraft.core.executor import execute, execute_dry_run
+from reqcraft.core.reporter import print_report
 
 class OutputFormat(str, Enum):
     JSON = "json"
@@ -73,23 +74,7 @@ def run(
         report_json = json.dumps(report_dict, indent=2)
         print(report_json)
     else:
-        console.print(f"[bold]Running {loaded_collection.name}[/bold]")
-        for result in report.results:
-            console.print(f"Status code: {result.status_code}")
-            console.print(f"Response time (ms): {result.response_time_ms}")
-            if verbose:
-                console.print(f"Request url: {result.request_url}")
-                console.print(f"Request method: {result.request_method}")
-                console.print(f"Request headers: {result.request_headers}")
-                console.print(f"Response headers: {result.response_headers}")
-                console.print(f"Response body:")
-                console.print_json(result.body)
-            icon = "✓" if result.passed else "✗"
-            color = "green" if result.passed else "red"
-            console.print(f"[{color}]{icon} {result.name} (Test result)[/{color}]")
-            for a in result.assertions:
-                console.print(f"  {a.message}")
-        console.print(f"\n{report.passed}/{report.total} passed")
+        print_report(report, loaded_collection.name, verbose)
 
     if report.failed > 0:
         raise typer.Exit(code=1)
