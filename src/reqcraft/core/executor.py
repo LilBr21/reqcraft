@@ -70,15 +70,42 @@ def execute(collection: Collection, variables: dict[str, str], only: list[str], 
         assertion_results = []
         url = render(req.url, final_variables)
         headers = {k: render(v, final_variables) for k, v in req.headers.items()}
-        response = httpx.request(
-            req.method.value,
-            url,
-            headers=headers,
-            params=req.params,
-            json=req.body.json_body if req.body and req.body.json_body else None,
-            data=req.body.form if req.body and req.body.form else None,
-            content=req.body.raw if req.body and req.body.raw else None,
-        )
+        try:
+            response = httpx.request(
+                req.method.value,
+                url,
+                headers=headers,
+                params=req.params,
+                json=req.body.json_body if req.body and req.body.json_body else None,
+                data=req.body.form if req.body and req.body.form else None,
+                content=req.body.raw if req.body and req.body.raw else None,
+                timeout=req.timeout,
+            )
+        except httpx.TimeoutException as e:
+            results.append(RequestResult(
+                request_id=req.id,
+                name=req.name,
+                passed=False,
+                status_code=None,
+                response_time_ms=None,
+                assertions=[],
+                request_url=url,
+                request_method=req.method,
+                request_headers=headers if headers else None,
+                response_headers=None,
+                body=None,
+                error=str(e) or "Request timed out",
+            ))
+            failed += 1
+            if fail_fast:
+                return RunReport(
+                    total=len(sorted_requests),
+                    passed=passed,
+                    failed=failed,
+                    skipped=len(sorted_requests) - len(results),
+                    results=results
+                )
+            continue
         for assertion in req.assertions:
             evaluated = evaluate(assertion, response)
             if not evaluated.passed:
