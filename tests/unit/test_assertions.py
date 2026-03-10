@@ -157,3 +157,116 @@ def test_body_size_greater_than_passes():
     result = evaluate(assertion, response)
 
     assert result.passed is True
+
+
+def test_response_time_less_than_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(return_value=httpx.Response(200))
+        response = httpx.get("https://test.com")
+
+    assertion = ResponseTimeAssertion(type="response_time", op=Op.LESS_THAN, expected=10000)
+    result = evaluate(assertion, response)
+
+    assert result.passed is True
+
+
+def test_response_time_greater_than_fails():
+    with respx.mock:
+        respx.get("https://test.com").mock(return_value=httpx.Response(200))
+        response = httpx.get("https://test.com")
+
+    assertion = ResponseTimeAssertion(type="response_time", op=Op.GREATER_THAN, expected=99999)
+    result = evaluate(assertion, response)
+
+    assert result.passed is False
+
+
+def test_json_not_equals_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"status": "active"})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = JsonAssertion(type="json", path="status", op=Op.NOT_EQUALS, expected="inactive")
+    result = evaluate(assertion, response)
+
+    assert result.passed is True
+
+
+def test_json_greater_than_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"count": 10})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = JsonAssertion(type="json", path="count", op=Op.GREATER_THAN, expected=5)
+    result = evaluate(assertion, response)
+
+    assert result.passed is True
+
+
+def test_json_less_than_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"count": 3})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = JsonAssertion(type="json", path="count", op=Op.LESS_THAN, expected=10)
+    result = evaluate(assertion, response)
+
+    assert result.passed is True
+
+
+def test_json_matches_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"email": "user@example.com"})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = JsonAssertion(type="json", path="email", op=Op.MATCHES, expected=r".+@.+\..+")
+    result = evaluate(assertion, response)
+
+    assert result.passed is True
+
+
+def test_json_matches_fails():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"email": "not-an-email"})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = JsonAssertion(type="json", path="email", op=Op.MATCHES, expected=r".+@.+\..+")
+    result = evaluate(assertion, response)
+
+    assert result.passed is False
+
+
+def test_json_nested_path_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"user": {"profile": {"name": "Alice"}}})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = JsonAssertion(type="json", path="user.profile.name", op=Op.EQUALS, expected="Alice")
+    result = evaluate(assertion, response)
+
+    assert result.passed is True
+
+
+def test_header_contains_passes():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, headers={"content-type": "application/json; charset=utf-8"})
+        )
+        response = httpx.get("https://test.com")
+
+    assertion = HeaderAssertion(type="header", name="content-type", op=Op.CONTAINS, expected="application/json")
+    result = evaluate(assertion, response)
+
+    assert result.passed is True

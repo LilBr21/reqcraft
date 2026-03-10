@@ -65,3 +65,27 @@ def test_extract_empty_list():
     result = extract_values(response, [])
 
     assert result == {}
+
+
+def test_extract_missing_body_path_returns_empty():
+    with respx.mock:
+        respx.get("https://test.com").mock(
+            return_value=httpx.Response(200, json={"name": "Alice"})
+        )
+        response = httpx.get("https://test.com")
+
+    extracts = [Extract(name="token", source="body", path="missing.path")]
+    result = extract_values(response, extracts)
+
+    assert result == {"token": ""}
+
+
+def test_extract_missing_header_returns_empty():
+    with respx.mock:
+        respx.get("https://test.com").mock(return_value=httpx.Response(200))
+        response = httpx.get("https://test.com")
+
+    extracts = [Extract(name="trace_id", source="header", path="x-trace-id")]
+    result = extract_values(response, extracts)
+
+    assert result == {"trace_id": ""}
