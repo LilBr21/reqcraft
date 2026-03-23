@@ -210,6 +210,15 @@ reqcraft import curl "curl -X POST https://api.example.com/users -H 'Content-Typ
 # Write to a file
 reqcraft import curl "curl ..." --output my-collection.yaml
 
+# Overwrite an existing file
+reqcraft import curl "curl ..." --output my-collection.yaml --force
+
+# Override the collection name
+reqcraft import curl "curl ..." --name "My API"
+
+# Promote a custom API key header to auth
+reqcraft import curl "curl ... -H 'X-Api-Key: secret'" --api-key-header X-Api-Key
+
 # Pipe from clipboard or another command
 echo "curl ..." | reqcraft import curl
 ```
@@ -220,6 +229,7 @@ Auth headers are automatically detected and promoted:
 - `Authorization: Bearer <token>` → `auth.type: bearer`
 - `Authorization: Basic <base64>` → `auth.type: basic`
 - `-u username:password` → `auth.type: basic`
+- Any header via `--api-key-header <name>` → `auth.type: api_key`
 
 ## Environment files
 
