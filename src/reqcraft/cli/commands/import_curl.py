@@ -15,6 +15,7 @@ def import_curl(
         output: Path | None = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
         force: bool = typer.Option(False, "--force", "-f", help="Force overwrite of existing file"),
         name: str | None = typer.Option(None, "--name", "-n", help="Name of the collection"),
+        api_key_header: str | None = typer.Option(None, "--api-key-header", "-k", help="API key header"),
 ):
     if curl_command is None:
         if not sys.stdin.isatty():
@@ -29,7 +30,7 @@ def import_curl(
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(code=2)
 
-    curl_collection = parsed_curl_to_collection(parsed_curl, collection_name=name)
+    curl_collection = parsed_curl_to_collection(parsed_curl, collection_name=name, api_key_header=api_key_header)
     yaml_collection = collection_to_yaml(curl_collection)
 
     if output is None:

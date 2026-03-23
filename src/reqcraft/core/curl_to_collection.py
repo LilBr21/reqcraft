@@ -1,6 +1,6 @@
 import yaml
 from reqcraft.core.curl_parser import ParsedCurl
-from reqcraft.models.collection import Collection, AuthType, BearerAuth, BasicAuth, RequestBody, Request, Method
+from reqcraft.models.collection import Collection, AuthType, BearerAuth, BasicAuth, RequestBody, Request, Method, ApiKeyAuth
 from urllib.parse import urlparse
 
 def remove_empty(d):
@@ -10,7 +10,7 @@ def remove_empty(d):
         return [remove_empty(item) for item in d]
     return d
 
-def parsed_curl_to_collection(curl: ParsedCurl, collection_name: str | None = None) -> Collection:
+def parsed_curl_to_collection(curl: ParsedCurl, collection_name: str | None = None, api_key_header: str | None = None) -> Collection:
     name = ""
     auth = None
     body = None
@@ -32,6 +32,11 @@ def parsed_curl_to_collection(curl: ParsedCurl, collection_name: str | None = No
             auth = BasicAuth(type = AuthType.BASIC, username = curl.auth.get("username", ""), password=curl.auth.get("password", ""))
         else:
             auth = None
+
+    if api_key_header and curl.headers.get(api_key_header):
+        header_value = curl.headers.get(api_key_header)
+        auth = ApiKeyAuth(type = AuthType.API_KEY, header = api_key_header, value = header_value)
+        del(curl.headers[api_key_header])
 
     if curl.body:
         if curl.body.get("json"):
