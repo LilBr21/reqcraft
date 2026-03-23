@@ -12,7 +12,8 @@ console = Console()
 @import_app.command(name="curl")
 def import_curl(
         curl_command: str | None = typer.Argument(None),
-        output: Path | None = typer.Option(None, "--output", "-o", help="Write to file instead of stdout")
+        output: Path | None = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
+        force: bool = typer.Option(False, "--force", "-f", help="Force overwrite of existing file"),
 ):
     if curl_command is None:
         if not sys.stdin.isatty():
@@ -33,7 +34,7 @@ def import_curl(
     if output is None:
         console.print(yaml_collection)
     else:
-        if output.exists():
+        if output.exists() and not force:
             console.print("[red]Error: output file already exists[/red]")
             raise typer.Exit(code=2)
         else:
