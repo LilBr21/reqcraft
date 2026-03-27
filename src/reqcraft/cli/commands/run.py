@@ -54,7 +54,7 @@ def run(
         if dry_run:
             execute_dry_run(loaded_collection, variables)
             return
-        report = execute(loaded_collection, variables, only, skip, fail_fast, verbose)
+        report = execute(loaded_collection, variables, only, skip, fail_fast)
     except ValueError as e:
         _handle_error(e, ErrorType.VALIDATION, output)
         raise typer.Exit(code=2)
