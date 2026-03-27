@@ -22,7 +22,7 @@ def test_execute_basic_request():
         respx.get("https://test.com").mock(return_value=httpx.Response(200))
         report = execute(
             make_collection([make_request()]),
-            variables={}, only=[], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=[], fail_fast=False,
         )
 
     assert report.total == 1
@@ -38,7 +38,7 @@ def test_execute_variables_substituted_in_url():
                 [make_request(url="{{ base_url }}/users")],
                 variables={"base_url": "https://api.example.com"},
             ),
-            variables={}, only=[], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=[], fail_fast=False,
         )
 
     assert report.total == 1
@@ -54,7 +54,7 @@ def test_execute_cli_vars_override_collection_vars():
                 variables={"base_url": "https://original.com"},
             ),
             variables={"base_url": "https://override.com"},
-            only=[], skip=[], fail_fast=False, verbose=False,
+            only=[], skip=[], fail_fast=False,
         )
 
     assert report.total == 1
@@ -67,7 +67,7 @@ def test_execute_assertion_failure_recorded():
         req = make_request(assertions=[StatusAssertion(type="status", expected=200)])
         report = execute(
             make_collection([req]),
-            variables={}, only=[], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=[], fail_fast=False,
         )
 
     assert report.failed == 1
@@ -83,7 +83,7 @@ def test_execute_fail_fast_stops_after_first_failure():
         req_b = make_request(id="b", url="https://test.com/b")
         report = execute(
             make_collection([req_a, req_b]),
-            variables={}, only=[], skip=[], fail_fast=True, verbose=False,
+            variables={}, only=[], skip=[], fail_fast=True,
         )
 
     assert report.failed == 1
@@ -96,7 +96,7 @@ def test_execute_timeout_recorded_as_failed():
         respx.get("https://test.com").mock(side_effect=httpx.TimeoutException("timed out"))
         report = execute(
             make_collection([make_request()]),
-            variables={}, only=[], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=[], fail_fast=False,
         )
 
     assert report.failed == 1
@@ -112,7 +112,7 @@ def test_execute_only_flag_runs_subset():
         req_b = make_request(id="b", url="https://test.com/b")
         report = execute(
             make_collection([req_a, req_b]),
-            variables={}, only=["a"], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=["a"], skip=[], fail_fast=False,
         )
 
     assert report.total == 1
@@ -128,7 +128,7 @@ def test_execute_only_flag_includes_dependencies():
         req_other = make_request(id="other", url="https://test.com/other")
         report = execute(
             make_collection([req_login, req_profile, req_other]),
-            variables={}, only=["profile"], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=["profile"], skip=[], fail_fast=False,
         )
 
     assert report.total == 2
@@ -145,7 +145,7 @@ def test_execute_skip_flag_excludes_request():
         req_b = make_request(id="b", url="https://test.com/b")
         report = execute(
             make_collection([req_a, req_b]),
-            variables={}, only=[], skip=["a"], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=["a"], fail_fast=False,
         )
 
     assert report.total == 1
@@ -159,7 +159,7 @@ def test_execute_skip_dependency_raises():
     with pytest.raises(ValueError, match="Cannot skip"):
         execute(
             make_collection([req_a, req_b]),
-            variables={}, only=[], skip=["a"], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=["a"], fail_fast=False,
         )
 
 
@@ -184,7 +184,7 @@ def test_execute_extracted_value_used_in_next_request():
         )
         report = execute(
             make_collection([req_login, req_profile]),
-            variables={}, only=[], skip=[], fail_fast=False, verbose=False,
+            variables={}, only=[], skip=[], fail_fast=False,
         )
 
     assert report.passed == 2
